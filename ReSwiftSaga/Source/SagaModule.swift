@@ -48,6 +48,17 @@ open class SagaModule<SagaStoreType: StoreType> {
         self.tasks[name] = nil
     }
     
+    public func cancelAllSagas() {
+        for taskGroup in self.tasks.values {
+            for task in taskGroup {
+                task.finished = true
+                task.workItem.cancel()
+            }
+        }
+        
+        self.tasks.removeAll()
+    }
+    
     private func takeFirst<T: Saga where T.SagaStoreStateType == SagaStoreType.State>(saga: T) {
         if let currentTask = self.tasks[T.name]?.first, currentTask.finished == false {
             return // Ignoring the task if there is an ongoing takeFirst task for this Saga
