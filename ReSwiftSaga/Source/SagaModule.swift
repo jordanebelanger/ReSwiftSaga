@@ -22,8 +22,8 @@ open class SagaModule<SagaStoreType: StoreType> {
         self.store = store
     }
     
-    public func execute<T: Saga>(saga: T) {
-        self.cleanUp(saga: saga)
+    public func execute<T: Saga where T.SagaStoreStateType == SagaStoreType.State>(saga: T) {
+        self.cleanUpSagas(withName: T.name)
         
         switch T.type {
         case .takeFirst:
@@ -48,7 +48,7 @@ open class SagaModule<SagaStoreType: StoreType> {
         self.tasks[name] = nil
     }
     
-    private func takeFirst<T: Saga>(saga: T) {
+    private func takeFirst<T: Saga where T.SagaStoreStateType == SagaStoreType.State>(saga: T) {
         if let currentTask = self.tasks[T.name]?.first, currentTask.finished == false {
             return // Ignoring the task if there is an ongoing takeFirst task for this Saga
         }
@@ -59,7 +59,7 @@ open class SagaModule<SagaStoreType: StoreType> {
         task.workItem.perform()
     }
     
-    private func takeEvery<T: Saga>(saga: T) {
+    private func takeEvery<T: Saga where T.SagaStoreStateType == SagaStoreType.State>(saga: T) {
         let task = self.task(forSaga: saga)
         if self.tasks[T.name] != nil {
             self.tasks[T.name]!.append(task)
@@ -70,7 +70,7 @@ open class SagaModule<SagaStoreType: StoreType> {
         task.workItem.perform()
     }
     
-    private func takeLatest<T: Saga>(saga: T) {
+    private func takeLatest<T: Saga where T.SagaStoreStateType == SagaStoreType.State>(saga: T) {
         if let currentTask = self.tasks[T.name]?.first, currentTask.finished == false {
             currentTask.finished = true
             currentTask.workItem.cancel()
@@ -82,32 +82,37 @@ open class SagaModule<SagaStoreType: StoreType> {
         task.workItem.perform()
     }
     
-    private func task<T: Saga>(forSaga saga: T) -> SagaModuleTask {
+    private func task<T: Saga where T.SagaStoreStateType == SagaStoreType.State>(forSaga saga: T) -> SagaModuleTask {
         let task = SagaModuleTask()
+        
         task.workItem = DispatchWorkItem { [weak self, weak task] in
-            saga.action { [weak self, weak task] dispatchFn in
-                guard let weakSagaModule = self, let weakTask = task, weakTask.finished == false else {
+            guard let strongSagaModule = self, let strongTask = task, strongTask.finished == false else {
+                return
+            }
+            
+            let finishCallback: () -> Void = { [weak strongTask] in
+                strongTask?.finished = true
+            }
+
+            saga.action(strongSagaModule.store.state, finishCallback) { [weak strongSagaModule, weak strongTask] dispatchFn in
+                guard let sagaModule = strongSagaModule, let task = strongTask, task.finished == false else {
                     return
                 }
                 
-                let result = dispatchFn(weakSagaModule.store.state)
-                if result.0 {
-                    weakTask.finished = true
-                }
-                
-                let _ = weakSagaModule.store.dispatch(result.1)
+                let action = dispatchFn(sagaModule.store.state)
+                let _ = sagaModule.store.dispatch(action)
             }
         }
         return task
     }
     
-    private func cleanUp<T: Saga>(saga: T) {
-        guard var tasks = self.tasks[T.name] else {
+    private func cleanUpSagas(withName name: String) {
+        guard var tasks = self.tasks[name] else {
             return
         }
         
         tasks = tasks.filter { $0.finished == false }
-        self.tasks[T.name] = tasks
+        self.tasks[name] = tasks
     }
     
 }
