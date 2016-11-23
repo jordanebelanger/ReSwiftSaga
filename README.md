@@ -1,6 +1,6 @@
 Here's how it works:
 
-``` 
+```swift 
 // Create a store as per usual
 let store = Store(reducer: Reducer(), state: AppState())
 
