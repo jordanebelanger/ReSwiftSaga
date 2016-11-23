@@ -18,11 +18,11 @@ open class SagaModule<SagaStoreType: StoreType> {
     
     private var tasks: [String: [SagaModuleTask]] = [:]
     
-    init(withStore store: SagaStoreType) {
+    required public init(withStore store: SagaStoreType) {
         self.store = store
     }
     
-    public func execute<T: Saga where T.SagaStoreStateType == SagaStoreType.State>(saga: T) {
+    public func dispatch<T: Saga where T.SagaStoreStateType == SagaStoreType.State>(_ saga: T) {
         self.cleanUpSagas(withName: T.name)
         
         switch T.type {

@@ -28,7 +28,7 @@ public protocol Saga {
     // passed in parameter to the DispatchFn in your Saga's action.
     typealias DispatchFn = ( (SagaStoreStateType) -> (Action) ) -> Void
     
-    typealias ActionCreator = (SagaStoreStateType, FinishCallback, DispatchFn) -> Void
+    typealias ActionCreator = (SagaStoreStateType, @escaping FinishCallback, @escaping DispatchFn) -> Void
     
     var action: ActionCreator { get }
 }
