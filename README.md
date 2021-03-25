@@ -1,3 +1,6 @@
+# READ FIRST
+I will not work on this further, if you would like to take over or get the `ReSwiftSage` name for yourself simply send me an email or raise an issue 👌
+#
 Here's how it works:
 
 ```swift 
